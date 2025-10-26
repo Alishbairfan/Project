@@ -1,0 +1,11 @@
+pandas
+numpy
+scikit-learn
+hopsworks[python]
+requests
+python-dotenv
+matplotlib
+seaborn
+pyyaml
+joblib
+streamlit
