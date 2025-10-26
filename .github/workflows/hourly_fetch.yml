@@ -1,0 +1,30 @@
+name: Hourly Fetch and Compute Features
+
+on:
+  schedule:
+    - cron: '0 * * * *'  
+  workflow_dispatch:
+
+jobs:
+  fetch_compute:
+    runs-on: ubuntu-latest
+    env:
+      HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
+      OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
+      WEATHERBIT_API_KEY: ${{ secrets.WEATHERBIT_API_KEY }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.12
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run fetch script
+        run: python fetch_data.py
+
+      - name: Run compute script
+        run: python compute.py
