@@ -5,9 +5,6 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-dotenv_path = Path("keys.env")
-load_dotenv(dotenv_path=dotenv_path)
-
 OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
 WEATHERBIT_API_KEY = os.getenv("WEATHERBIT_API_KEY")
 LAT = 24.8607
