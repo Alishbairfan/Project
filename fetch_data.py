@@ -3,10 +3,8 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 import os
 from pathlib import Path
-from dotenv import load_dotenv
-
-OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
-WEATHERBIT_API_KEY = os.getenv("WEATHERBIT_API_KEY")
+OPENWEATHER_API_KEY ="8e01acd56128708936dd99cfdcb59500"
+WEATHERBIT_API_KEY ="e3876c4116194da1a79e2ed6fed6055c"
 LAT = 24.8607
 LON = 67.0011
 LOCAL_TZ = "Asia/Karachi"
@@ -82,4 +80,7 @@ def fetch_current_features():
 if __name__ == "__main__":
     current_features = fetch_current_features()
     print(current_features)
-
+    df =pd.DataFrame([current_features])
+    df.to_csv("realtime_features.csv", index=False)
+    print("data saved in realtime_features.csv")
+        
