@@ -27,10 +27,3 @@ jobs:
           python fetch_data.py
           python compute.py
 
-      - name: Upload CSVs as artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: updated-csvs
-          path: |
-            computed_features.csv
-            realtime_features.csv
