@@ -27,10 +27,11 @@ jobs:
           python train.py
           python predict.py
 
-      - name: Commit model & predictions
-        run: |
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
-          git add best_aqi_model.pkl predicted_next_3_days.csv
-          git commit -m "Update model and predictions [skip ci]" || echo "No changes"
-          git push
+      - name: Upload prediction CSVs
+        uses: actions/upload-artifact@v3
+        with:
+          name: predicted-data
+          path: |
+            predicted_next_3_days.csv
+            realtime_features.csv
+            computed_features.csv
