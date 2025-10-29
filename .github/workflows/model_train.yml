@@ -26,12 +26,3 @@ jobs:
         run: |
           python train.py
           python predict.py
-
-      - name: Upload prediction CSVs
-        uses: actions/upload-artifact@v3
-        with:
-          name: predicted-data
-          path: |
-            predicted_next_3_days.csv
-            realtime_features.csv
-            computed_features.csv
