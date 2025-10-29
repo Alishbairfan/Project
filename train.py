@@ -4,14 +4,15 @@ import joblib
 from xgboost import XGBRegressor
 
 def train_or_update_xgb(model_path="best_aqi_model.pkl", csv_path="computed_features.csv", ts_path="last_timestamp.txt"):
-    # Load the dataset
+   
+
     df = pd.read_csv(csv_path)
 
-    # Ensure timestamp column exists
+  
     if "timestamp" not in df.columns:
-        raise ValueError("❌ 'timestamp' column not found in CSV file")
+        raise ValueError("'timestamp' column not found in CSV file")
 
-    # --- Filter new data based on last timestamp ---
+    
     if os.path.exists(ts_path):
         with open(ts_path, "r") as f:
             last_ts = f.read().strip()
@@ -20,21 +21,21 @@ def train_or_update_xgb(model_path="best_aqi_model.pkl", csv_path="computed_feat
         df_new = df  # First run: use all data
 
     if df_new.empty:
-        print("⚠️ No new data found. Skipping training update.")
+        print(" No new data found. Skipping training update.")
         return None
 
-    # --- Prepare training data ---
+    
     df_new = df_new.copy()
     df_new["aqi_next_hour"] = df_new["aqi"].shift(-1)
     X_new = df_new.drop(columns=["timestamp", "aqi", "aqi_next_hour"]).iloc[:-1]
     y_new = df_new["aqi_next_hour"].iloc[:-1]
 
-    # --- Load or initialize model ---
+    
     if os.path.exists(model_path):
-        print("✅ Loading existing XGBoost model...")
+        print(" Loading existing XGBoost model...")
         model = joblib.load(model_path)
     else:
-        print("🧠 Training new XGBoost model...")
+        print("Training new XGBoost model...")
         model = XGBRegressor(
             n_estimators=200,
             learning_rate=0.05,
@@ -44,19 +45,19 @@ def train_or_update_xgb(model_path="best_aqi_model.pkl", csv_path="computed_feat
             random_state=42
         )
 
-    # --- Train or update model ---
+   
     model.fit(X_new, y_new, xgb_model=None if not os.path.exists(model_path) else model.get_booster())
-    print("✅ Model updated with latest data.")
+    print("Model updated with latest data.")
 
-    # --- Save model ---
+   
     joblib.dump(model, model_path)
-    print(f"💾 Model saved to {model_path}")
+    print(f"Model saved to {model_path}")
 
-    # --- Save the latest timestamp ---
+    
     new_last_ts = str(df_new["timestamp"].max())
     with open(ts_path, "w") as f:
         f.write(new_last_ts)
-    print(f"⏱️ Updated last timestamp to: {new_last_ts}")
+    print(f" Updated last timestamp to: {new_last_ts}")
 
     return model
 

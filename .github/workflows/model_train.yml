@@ -1,25 +1,36 @@
-name: Daily Model Training
+name: Train and Predict Daily
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # daily at midnight
+    - cron: '0 14 * * *' 
   workflow_dispatch:
 
 jobs:
-  train:
+  train-and-predict:
     runs-on: ubuntu-latest
-    env:
-      HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
+
     steps:
       - uses: actions/checkout@v3
 
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.12
+          python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-      - name: Run training script
-        run: python train.py
+      - name: Run Training & Prediction
+        run: |
+          python train.py
+          python predict.py
+
+      - name: Commit model & predictions
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add best_aqi_model.pkl predicted_next_3_days.csv
+          git commit -m "Update model and predictions [skip ci]" || echo "No changes"
+          git push
