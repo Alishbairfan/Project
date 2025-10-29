@@ -24,7 +24,7 @@ jobs:
 
       - name: Run Fetch & Compute
         run: |
-          python fetch.py
+          python fetch_data.py
           python compute.py
 
       - name: Commit CSVs
