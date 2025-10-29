@@ -27,10 +27,10 @@ jobs:
           python fetch_data.py
           python compute.py
 
-      - name: Commit CSVs
-        run: |
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
-          git add realtime_features.csv computed_features.csv
-          git commit -m "Update features [skip ci]" || echo "No changes"
-          git push
+      - name: Upload CSVs as artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: updated-csvs
+          path: |
+            computed_features.csv
+            realtime_features.csv
