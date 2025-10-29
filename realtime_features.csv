@@ -1,0 +1,2 @@
+timestamp,pm25,pm10,no2,o3,temperature,humidity,wind_speed,hour,day,month,weekday,is_weekend,aqi,weather_description
+29/10/2025 14:00,60.12,100.77,1.49,152.48,32,25,9.8,13,29,10,2,0,76,Sand/dust
