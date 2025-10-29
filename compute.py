@@ -54,7 +54,9 @@ if __name__ == "__main__":
     df_features = prepare_features(current_features)
     
     desired_order = [
-    "timestamp", "aqi","pm25", "pm10","no2","o3","temperature","humidity","wind_speed", "hour", "day", "month", "weekday", "is_weekend", "aqi_change_rate","pm25_to_pm10_ratio","temp_change","humidity_change",
+    "timestamp", "aqi","pm25", "pm10","no2","o3","temperature","humidity",
+    "wind_speed", "hour", "day", "month", "weekday", "is_weekend",
+    "aqi_change_rate","pm25_to_pm10_ratio","temp_change","humidity_change",
     "weather_code"]
 
     df_features = df_features[desired_order]
