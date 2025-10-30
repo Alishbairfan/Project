@@ -9,4 +9,4 @@ pyyaml
 joblib
 streamlit
 xgboost
-hopsworks
+hopsworks[python]
