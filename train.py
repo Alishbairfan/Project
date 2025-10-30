@@ -1,65 +1,57 @@
-import os
 import pandas as pd
+from datetime import datetime, timedelta
 import joblib
 from xgboost import XGBRegressor
+import hopsworks
 
-def train_or_update_xgb(model_path="best_aqi_model.pkl", csv_path="computed_features.csv", ts_path="last_timestamp.txt"):
-   
-
-    df = pd.read_csv(csv_path)
-
-  
-    if "timestamp" not in df.columns:
-        raise ValueError("'timestamp' column not found in CSV file")
-
-    
-    if os.path.exists(ts_path):
-        with open(ts_path, "r") as f:
-            last_ts = f.read().strip()
-        df_new = df[df["timestamp"] > last_ts]
+def fetch_last_24_hours(use_hopsworks=True, csv_path="computed_features.csv",
+                        fg_name="karachi_realtime_features", fg_version=1,
+                        api_key="xo0aJonG6geNXT6N.Y1Xs6QMqrk1qExXtGDelouhghHJlKlDKTm4Erx1sWrTrmIjPyP8nZTqlS2xEgEOC"):
+    if use_hopsworks:
+        project = hopsworks.login(api_key_value=api_key)
+        fs = project.get_feature_store()
+        fg = fs.get_feature_group(fg_name, version=fg_version)
+        df = fg.read()
     else:
-        df_new = df  # First run: use all data
+        if not pd.io.common.file_exists(csv_path):
+            return pd.DataFrame()
+        df = pd.read_csv(csv_path)
 
-    if df_new.empty:
-        print(" No new data found. Skipping training update.")
+    if df.empty:
+        return df
+
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    last_24h = datetime.now() - timedelta(hours=24)
+    df_24h = df[df["timestamp"] > last_24h].copy().reset_index(drop=True)
+    return df_24h
+
+def train_daily_model():
+    df_train = fetch_last_24_hours()
+    if df_train.empty:
+        print("No data available for last 24 hours. Skipping training.")
         return None
 
-    
-    df_new = df_new.copy()
-    df_new["aqi_next_hour"] = df_new["aqi"].shift(-1)
-    X_new = df_new.drop(columns=["timestamp", "aqi", "aqi_next_hour"]).iloc[:-1]
-    y_new = df_new["aqi_next_hour"].iloc[:-1]
+    df_train["aqi_next_hour"] = df_train["aqi"].shift(-1)
+    df_train = df_train.dropna(subset=["aqi_next_hour"])
 
-    
-    if os.path.exists(model_path):
-        print(" Loading existing XGBoost model...")
+    X_train = df_train.drop(columns=["timestamp", "aqi", "aqi_next_hour"])
+    y_train = df_train["aqi_next_hour"]
+
+    model_path = "best_aqi_model.pkl"
+    if pd.io.common.file_exists(model_path):
         model = joblib.load(model_path)
+        print("Loaded existing model.")
     else:
-        print("Training new XGBoost model...")
         model = XGBRegressor(
-            n_estimators=200,
-            learning_rate=0.05,
-            max_depth=6,
-            subsample=0.8,
-            colsample_bytree=0.8,
-            random_state=42
+            n_estimators=200, learning_rate=0.05, max_depth=6,
+            subsample=0.8, colsample_bytree=0.8, random_state=42
         )
+        print("Created new model.")
 
-   
-    model.fit(X_new, y_new, xgb_model=None if not os.path.exists(model_path) else model.get_booster())
-    print("Model updated with latest data.")
-
-   
+    model.fit(X_train, y_train, xgb_model=None if not pd.io.common.file_exists(model_path) else model.get_booster())
     joblib.dump(model, model_path)
-    print(f"Model saved to {model_path}")
-
-    
-    new_last_ts = str(df_new["timestamp"].max())
-    with open(ts_path, "w") as f:
-        f.write(new_last_ts)
-    print(f" Updated last timestamp to: {new_last_ts}")
-
+    print(f"Model trained/updated and saved to {model_path}")
     return model
 
 if __name__ == "__main__":
-    train_or_update_xgb()
+    train_daily_model()
