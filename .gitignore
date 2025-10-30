@@ -1,3 +1,7 @@
 *.csv
 __pycache__/
+<<<<<<< HEAD
 .env
+=======
+.env
+>>>>>>> a7ddbb78b7313d684791a5a8ace4c223ad3d4364
