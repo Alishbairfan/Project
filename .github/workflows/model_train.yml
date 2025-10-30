@@ -31,3 +31,9 @@ jobs:
         run: |
           python train.py
           python predict.py
+          
+      - name: Upload predictions
+        uses: actions/upload-artifact@v4
+        with:
+          name: aqi-predictions
+          path: predicted_aqi_predictions.csv
