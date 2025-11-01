@@ -1,5 +1,3 @@
-pandas
-numpy
 scikit-learn
 requests
 python-dotenv
@@ -10,3 +8,6 @@ joblib
 streamlit
 xgboost
 hopsworks[python]
+numpy==1.25.3
+pandas==2.1.1
+hopsworks==4.2.0
