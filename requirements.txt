@@ -4,9 +4,9 @@ python-dotenv
 matplotlib
 seaborn
 pyyaml
-joblib
+joblib==1.2.0
 streamlit
-xgboost
+xgboost==3.1.1
 hopsworks[python]
 numpy==1.26.4
 pandas==2.1.4
