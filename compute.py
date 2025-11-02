@@ -115,7 +115,7 @@ def store_in_hopsworks(df):
         name="karachi_realtime_features",
         version=1,
         primary_key=["timestamp"],
-        description="Karachi aqi computed features",
+        description="Karachi Aqi computed features",
         online_enabled=True
     )
     
