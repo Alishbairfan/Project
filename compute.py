@@ -88,7 +88,7 @@ def store_in_hopsworks(df):
         "pm25_to_pm10_ratio", "temp_change", "humidity_change", "weather_code"
     ]
     df = df[desired_order]
-        df = df.astype({
+    df = df.astype({
         "temperature": "float64",
         "wind_speed": "float64",
         "temp_change": "float64",
