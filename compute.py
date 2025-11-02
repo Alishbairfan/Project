@@ -88,6 +88,13 @@ def store_in_hopsworks(df):
         "pm25_to_pm10_ratio", "temp_change", "humidity_change", "weather_code"
     ]
     df = df[desired_order]
+    df["temperature"] = df["temperature"].astype(float)
+    df["wind_speed"] = df["wind_speed"].astype(float)
+    df["temp_change"] = df["temp_change"].astype(int)
+    df["weather_code"] = df["weather_code"].astype(int)
+    df["aqi_change_rate"] = df["aqi_change_rate"].astype(float)
+    df["pm25_to_pm10_ratio"] = df["pm25_to_pm10_ratio"].astype(float)
+    df["humidity_change"] = df["humidity_change"].astype(float)
 
     fg = fs.get_or_create_feature_group(
         name="karachi_realtime_features",
@@ -97,7 +104,6 @@ def store_in_hopsworks(df):
         online_enabled=True
     )
     df["timestamp"] = df["timestamp"].astype(str)
-    df["weather_code"] = df["weather_code"].astype("int64")
 
     existing_df = fg.read()
     existing_df["timestamp"] = pd.to_datetime(existing_df["timestamp"])
