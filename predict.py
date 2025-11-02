@@ -8,9 +8,12 @@ def fetch_last_24_hours(api_key):
     fs = project.get_feature_store()
     fg = fs.get_feature_group("karachi_realtime_features", version=1)
     df = fg.read()
-    df["timestamp"] = pd.to_datetime(df["timestamp"])
-    df_24h = df.sort_values("timestamp").tail(24).reset_index(drop=True)
-    
+    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+    df = df.dropna(subset=["timestamp"])
+    df = df.sort_values("timestamp").reset_index(drop=True)
+    df = df.set_index("timestamp").resample("H").ffill().reset_index()
+    last_24h_time = df["timestamp"].max() - pd.Timedelta(hours=23)
+    df_24h = df[df["timestamp"] >= last_24h_time].reset_index(drop=True)
     numeric_cols = [
         "pm25","pm10","no2","o3","temperature","humidity","wind_speed",
         "hour","day","month","weekday","is_weekend",
@@ -28,24 +31,24 @@ def predict_next_3_days(model_path, api_key, output_csv="predicted_aqi_predictio
     if df.empty:
         print("No data to predict.")
         return
+    numeric_cols = df.drop(columns=["timestamp","aqi"]).select_dtypes(include=["number","bool"]).columns
+    df_features = df[numeric_cols].copy()
 
     hourly_preds = []
-    last_row = df.iloc[-1:].copy()
     last_timestamp = df["timestamp"].iloc[-1]
 
-    numeric_cols = df.drop(columns=["timestamp","aqi"]).select_dtypes(include=["number","bool"]).columns
 
     for hour in range(1, 73):
-        X_input = last_row[numeric_cols]
+        X_input = df_features.values[-24:].reshape(1, -1) 
         next_pred = model.predict(X_input)[0]
-
+        
         pred_time = last_timestamp + timedelta(hours=hour)
         hourly_preds.append({"timestamp": pred_time, "predicted_aqi": round(next_pred,2)})
 
-        new_row = last_row.copy()
+        new_row = df_features.iloc[-1:].copy()
         new_row["aqi"] = next_pred
-        last_row = new_row
-
+        df_features = pd.concat([df_features, new_row], ignore_index=True)
+        
     hourly_df = pd.DataFrame(hourly_preds)
 
     combined_preds = []
@@ -70,6 +73,5 @@ def predict_next_3_days(model_path, api_key, output_csv="predicted_aqi_predictio
     return result_df
 
 if __name__ == "__main__":
-
-    API_KEY = "xo0aJonG6geNXT6N.Y1Xs6QMqrk1qExXtGDelouhghHJlKlDKTm4Erx1sWrTrmIjPyP8nZTqlS2xEgEOC"
+    API_KEY = "37GNR2LvcIsDqZd1.NHO665gQEMZGDRaZYCKszx7nenA0CJqLvLdOSMBvbpK2YzVJ7TD7hqw9HxCjRRk6"
     predict_next_3_days("best_aqi_model.pkl", API_KEY)
