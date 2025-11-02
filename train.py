@@ -23,7 +23,7 @@ def fetch_last_24_hours(use_hopsworks=True, csv_path="computed_features.csv",
     df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
     df = df.dropna(subset=["timestamp"])  
     df = df.sort_values("timestamp").reset_index(drop=True)
-                          
+    df = df.set_index("timestamp").resample("H").ffill().reset_index()         
     last_24h = datetime.now() - timedelta(hours=24)
     df_24h = df[df["timestamp"] > last_24h].copy().reset_index(drop=True)
     return df_24h
