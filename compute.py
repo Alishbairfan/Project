@@ -96,6 +96,7 @@ def store_in_hopsworks(df):
 
     df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
     df = df.dropna(subset=["timestamp"])
+    df = df.sort_values("timestamp").reset_index(drop=True)
 
     existing_df = fg.read()
     existing_df["timestamp"] = pd.to_datetime(existing_df["timestamp"], errors="coerce")
