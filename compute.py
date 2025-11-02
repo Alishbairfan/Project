@@ -5,16 +5,17 @@ from fetch_data import fetch_current_features
 import hopsworks
 
 def get_last_record_from_hopsworks():
-    project = hopsworks.login(api_key_value="xo0aJonG6geNXT6N.Y1Xs6QMqrk1qExXtGDelouhghHJlKlDKTm4Erx1sWrTrmIjPyP8nZTqlS2xEgEOC")
+    project = hopsworks.login(api_key_value="37GNR2LvcIsDqZd1.NHO665gQEMZGDRaZYCKszx7nenA0CJqLvLdOSMBvbpK2YzVJ7TD7hqw9HxCjRRk6")
     fs = project.get_feature_store()
     fg = fs.get_feature_group("karachi_realtime_features", version=1)
     df = fg.read()
 
     if df.empty:
         return None
-    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
     df = df.sort_values("timestamp")
     return df.iloc[-1]
+
 
 def compute_features(df):
     prev_record = get_last_record_from_hopsworks()
@@ -56,15 +57,19 @@ def prepare_features(current_features):
     df = compute_features(df)
     return df
 
+
 def save_to_csv(df, path="computed_features.csv"):
-    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+    df = df.dropna(subset=["timestamp"])
 
     if os.path.exists(path):
         existing = pd.read_csv(path)
-        existing["timestamp"] = pd.to_datetime(existing["timestamp"])
+        existing["timestamp"] = pd.to_datetime(existing["timestamp"], errors="coerce")
+        existing = existing.dropna(subset=["timestamp"])
 
-        new_time = df["timestamp"].iloc[0]
-        same_hour = existing[existing["timestamp"].dt.floor("h") == new_time.floor("h")]
+      
+        new_time = df["timestamp"].iloc[0].floor("h")
+        same_hour = existing[existing["timestamp"].dt.floor("h") == new_time]
 
         if same_hour.empty:
             df.to_csv(path, mode="a", header=False, index=False)
@@ -78,54 +83,47 @@ def save_to_csv(df, path="computed_features.csv"):
 
 def store_in_hopsworks(df):
     print("Connecting to Hopsworks...")
-    project = hopsworks.login(api_key_value="xo0aJonG6geNXT6N.Y1Xs6QMqrk1qExXtGDelouhghHJlKlDKTm4Erx1sWrTrmIjPyP8nZTqlS2xEgEOC")
+    project = hopsworks.login(api_key_value="37GNR2LvcIsDqZd1.NHO665gQEMZGDRaZYCKszx7nenA0CJqLvLdOSMBvbpK2YzVJ7TD7hqw9HxCjRRk6")
     fs = project.get_feature_store()
 
-    desired_order = [
-        "timestamp", "aqi", "pm25", "pm10", "no2", "o3",
-        "temperature", "humidity", "wind_speed", "hour", "day",
-        "month", "weekday", "is_weekend", "aqi_change_rate",
-        "pm25_to_pm10_ratio", "temp_change", "humidity_change", "weather_code"
-    ]
-    df = df[desired_order]
-    df = df.astype({
-        "temperature": "float64",
-        "wind_speed": "float64",
-        "temp_change": "float64",
-        "aqi_change_rate": "float64",
-        "pm25_to_pm10_ratio": "float64",
-        "humidity_change": "float64",
-        "weather_code": "int32",
-        "aqi": "float64",
-        "pm25": "float64",
-        "pm10": "float64",
-        "no2": "float64",
-        "o3": "float64",
-        "humidity": "float64",
-        "hour": "int32",
-        "day": "int32",
-        "month": "int32",
-        "weekday": "int32",
-        "is_weekend": "int32"
-    })
-    df["timestamp"] = df["timestamp"].astype(str)
-    print("\n[INFO] DataFrame dtypes before insert:")
-    print(df.dtypes)
     fg = fs.get_or_create_feature_group(
         name="karachi_realtime_features",
         version=1,
         primary_key=["timestamp"],
-        description="Karachi Aqi computed features",
+        description="Karachi AQI computed features",
         online_enabled=True
     )
-    
-    existing_df = fg.read()
-    existing_df["timestamp"] = pd.to_datetime(existing_df["timestamp"])
 
-    new_time = df["timestamp"].iloc[0]
-    if new_time not in existing_df["timestamp"].values:
-        fg.insert(df)
-        print(f"Inserted new hourly record for {new_time} into Hopsworks.")
+    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+    df = df.dropna(subset=["timestamp"])
+
+    existing_df = fg.read()
+    existing_df["timestamp"] = pd.to_datetime(existing_df["timestamp"], errors="coerce")
+    existing_df = existing_df.dropna(subset=["timestamp"])
+
+   
+    new_time = df["timestamp"].iloc[0].floor("h")
+    if new_time not in existing_df["timestamp"].dt.floor("h").values:
+        
+        df_insert = df.copy()
+        df_insert["timestamp"] = df_insert["timestamp"].dt.strftime("%Y-%m-%d %H:%M:%S")
+
+        bigint_cols = [
+            "aqi", "humidity", "hour", "day", "month", "weekday", "is_weekend",
+            "aqi_change_rate", "temp_change", "humidity_change"
+        ]
+        df_insert[bigint_cols] = df_insert[bigint_cols].round(0).astype("int64")
+
+        float_cols = [
+            "pm25", "pm10", "no2", "o3", "temperature", "wind_speed",
+            "pm25_to_pm10_ratio"
+        ]
+        df_insert[float_cols] = df_insert[float_cols].astype("double")
+
+        df_insert["weather_code"] = df_insert["weather_code"].astype("int32")
+
+        fg.insert(df_insert)
+        print(f"Inserted new hourly record for {df_insert['timestamp'].iloc[0]} into Hopsworks.")
     else:
         print(f"Record for {new_time} already exists in Hopsworks, skipping insert.")
 
