@@ -6,7 +6,7 @@ import hopsworks
 
 def fetch_last_24_hours(use_hopsworks=True, csv_path="computed_features.csv",
                         fg_name="karachi_realtime_features", fg_version=1,
-                        api_key="xo0aJonG6geNXT6N.Y1Xs6QMqrk1qExXtGDelouhghHJlKlDKTm4Erx1sWrTrmIjPyP8nZTqlS2xEgEOC"):
+                        api_key="37GNR2LvcIsDqZd1.NHO665gQEMZGDRaZYCKszx7nenA0CJqLvLdOSMBvbpK2YzVJ7TD7hqw9HxCjRRk6"):
     if use_hopsworks:
         project = hopsworks.login(api_key_value=api_key)
         fs = project.get_feature_store()
@@ -20,7 +20,10 @@ def fetch_last_24_hours(use_hopsworks=True, csv_path="computed_features.csv",
     if df.empty:
         return df
 
-    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+    df = df.dropna(subset=["timestamp"])  
+    df = df.sort_values("timestamp").reset_index(drop=True)
+                          
     last_24h = datetime.now() - timedelta(hours=24)
     df_24h = df[df["timestamp"] > last_24h].copy().reset_index(drop=True)
     return df_24h
