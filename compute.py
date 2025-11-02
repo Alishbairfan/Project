@@ -88,14 +88,29 @@ def store_in_hopsworks(df):
         "pm25_to_pm10_ratio", "temp_change", "humidity_change", "weather_code"
     ]
     df = df[desired_order]
-    df["temperature"] = df["temperature"].astype(float)
-    df["wind_speed"] = df["wind_speed"].astype(float)
-    df["temp_change"] = df["temp_change"].astype(int)
-    df["weather_code"] = df["weather_code"].astype(int)
-    df["aqi_change_rate"] = df["aqi_change_rate"].astype(float)
-    df["pm25_to_pm10_ratio"] = df["pm25_to_pm10_ratio"].astype(float)
-    df["humidity_change"] = df["humidity_change"].astype(float)
-
+        df = df.astype({
+        "temperature": "float64",
+        "wind_speed": "float64",
+        "temp_change": "float64",
+        "aqi_change_rate": "float64",
+        "pm25_to_pm10_ratio": "float64",
+        "humidity_change": "float64",
+        "weather_code": "int32",
+        "aqi": "float64",
+        "pm25": "float64",
+        "pm10": "float64",
+        "no2": "float64",
+        "o3": "float64",
+        "humidity": "float64",
+        "hour": "int32",
+        "day": "int32",
+        "month": "int32",
+        "weekday": "int32",
+        "is_weekend": "int32"
+    })
+    df["timestamp"] = df["timestamp"].astype(str)
+    print("\n[INFO] DataFrame dtypes before insert:")
+    print(df.dtypes)
     fg = fs.get_or_create_feature_group(
         name="karachi_realtime_features",
         version=1,
@@ -103,8 +118,7 @@ def store_in_hopsworks(df):
         description="Hourly processed AQI features",
         online_enabled=True
     )
-    df["timestamp"] = df["timestamp"].astype(str)
-
+    
     existing_df = fg.read()
     existing_df["timestamp"] = pd.to_datetime(existing_df["timestamp"])
 
