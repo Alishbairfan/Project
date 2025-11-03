@@ -43,7 +43,7 @@ def load_model_from_registry(api_key, model_name="aqi_predictor", version=None):
         raise FileNotFoundError(f"No .pkl file in {model_dir}")
     return joblib.load(os.path.join(model_dir, pkl_files[0]))
 
-def predict_next_hours(api_key, model_name="aqi_predictor", output_csv="predicted_aqi.csv"):
+def predict_next_hours(api_key, model_name="aqi_predictor", output_csv="predicted_aqi_predictions.csv"):
     model = load_model_from_registry(api_key, model_name)
     df_24h = fetch_last_24_hours(api_key)
 
