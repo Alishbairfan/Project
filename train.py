@@ -20,12 +20,14 @@ def fetch_last_24_hours(use_hopsworks=True, csv_path="computed_features.csv",
     if df.empty:
         return df
 
-    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce" ,utc=True)
     df = df.dropna(subset=["timestamp"])  
     df = df.sort_values("timestamp").reset_index(drop=True)
     df = df.set_index("timestamp").resample("H").ffill().reset_index()         
-    last_24h = datetime.now() - timedelta(hours=24)
-    df_24h = df[df["timestamp"] > last_24h].copy().reset_index(drop=True)
+    latest_time = df["timestamp"].max()
+    last_24h = latest_time - pd.Timedelta(hours=24)
+    df_24h = df[df["timestamp"] > last_24h]
+
     return df_24h
 
 def train_daily_model():
@@ -40,21 +42,33 @@ def train_daily_model():
     X_train = df_train.drop(columns=["timestamp", "aqi", "aqi_next_hour"])
     y_train = df_train["aqi_next_hour"]
 
-    model_path = "best_aqi_model.pkl"
-    if pd.io.common.file_exists(model_path):
-        model = joblib.load(model_path)
-        print("Loaded existing model.")
-    else:
+    project = hopsworks.login(api_key_value="37GNR2LvcIsDqZd1.NHO665gQEMZGDRaZYCKszx7nenA0CJqLvLdOSMBvbpK2YzVJ7TD7hqw9HxCjRRk6")
+    mr = project.get_model_registry()
+    model_name = "aqi_predictor"
+
+    try:
+        model_meta = mr.get_model(model_name)
+        model_dir = model_meta.download()
+        model = joblib.load(model_dir + "/best_aqi_model.pkl")
+        print(f"Loaded existing model version {model_meta.version}")
+    except:
         model = XGBRegressor(
             n_estimators=200, learning_rate=0.05, max_depth=6,
             subsample=0.8, colsample_bytree=0.8, random_state=42
         )
         print("Created new model.")
 
-    model.fit(X_train, y_train, xgb_model=None if not pd.io.common.file_exists(model_path) else model.get_booster())
-    joblib.dump(model, model_path)
-    print(f"Model trained/updated and saved to {model_path}")
-    return model
+    
+    model.fit(X_train, y_train, xgb_model=None if 'model_meta' not in locals() else model.get_booster())
 
+    joblib.dump(model, "best_aqi_model.pkl")
+    model_meta = mr.python.create_model(
+        name=model_name,
+        description="AQI next-hour prediction model"
+    )
+    model_meta.save("best_aqi_model.pkl")
+    print(f"Model trained and registered in Hopsworks Registry as version {model_meta.version}")
+
+    return model
 if __name__ == "__main__":
     train_daily_model()
