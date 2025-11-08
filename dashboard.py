@@ -1,9 +1,9 @@
 import streamlit as st
 import pandas as pd
-from predict import predict_next_3_days  
 
 st.set_page_config(page_title="AQI Prediction Dashboard", layout="centered")
 st.title("Karachi AQI Prediction Dashboard")
+
 def aqi_alert(aqi):
     if aqi <= 50:
         return "Good", "green"
@@ -19,27 +19,35 @@ def aqi_alert(aqi):
         return "Hazardous", "maroon"
 
 st.sidebar.header("Settings")
-model_path = st.sidebar.text_input("Model Path", "best_aqi_model.pkl")
-csv_path = st.sidebar.text_input("CSV Path", "computed_features.csv")
-output_csv = st.sidebar.text_input("Output CSV Path", "predicted_aqi_predictions.csv")
+csv_path = st.sidebar.text_input("Predicted AQI CSV Path", "predicted_aqi_predictions.csv")
 
-if st.sidebar.button("Predict AQI"):
-   
-    result_df = predict_next_3_days(model_path, csv_path, output_csv)
+if st.sidebar.button("Load Predictions"):
+    try:
+        df = pd.read_csv(csv_path)
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
+    except Exception as e:
+        st.error(f"Could not load CSV: {e}")
+        st.stop()
 
-    next_hour_df = result_df[result_df["type"] == "next_hour"]
-    daily_df = result_df[result_df["type"] == "daily_aggregate"]
+    next_hour = df.iloc[0]
+    next_hour_value = next_hour['predicted_aqi']
+    next_hour_time = next_hour['timestamp']
+    
+    next_hour_time_str = pd.to_datetime(next_hour_time).strftime("%Y-%m-%d %H:%M")
+ 
 
-    st.subheader("Next Hour AQI")
-    next_hour_value = next_hour_df["predicted_aqi"].values[0]
-    next_hour_time = next_hour_df["timestamp"].values[0]
     status, color = aqi_alert(next_hour_value)
-    st.metric(label=f"Predicted AQI at {next_hour_time}", value=next_hour_value)
+    st.subheader("Next Hour AQI")
+    st.markdown(
+        f"<h2 style='color:{color}'>Predicted AQI at {next_hour_time_str}: {next_hour_value} ({status})</h2>",
+        unsafe_allow_html=True
+)
 
-   
     st.subheader("Next 3 Days AQI (Daily Average)")
+    df['date'] = df['timestamp'].dt.date
+    daily_avg = df.groupby('date')['predicted_aqi'].mean().reset_index()
+    daily_avg['Alert'] = daily_avg['predicted_aqi'].apply(lambda x: aqi_alert(x)[0])
+    st.dataframe(daily_avg.rename(columns={'date': 'Date', 'predicted_aqi': 'AQI'}))
 
-    daily_display = daily_df[["timestamp", "predicted_aqi"]].rename(columns={"timestamp": "Date", "predicted_aqi": "AQI"})
-    daily_display["Alert"] = daily_display["AQI"].apply(lambda x: aqi_alert(x)[0])
-    st.dataframe(daily_display)
-    st.line_chart(daily_df.set_index("timestamp")["predicted_aqi"])
+    st.subheader("Next 72 Hours AQI Prediction")
+    st.line_chart(df.set_index('timestamp')['predicted_aqi'])
